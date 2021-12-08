@@ -16,8 +16,11 @@ var searchPIs = true;
 
 function logger(log, type) {
 	//logs the item to the console
+	//copied from TallyArbiter blinkt listener
 
 	let dtNow = new Date();
+
+	if(typeof(log) !== "string") log = JSON.stringify(log);
 
 	switch(type) {
 		case 'info':
@@ -37,7 +40,7 @@ function logger(log, type) {
 
 function connectTallyArbiter(ip, port) {
 	logger(`Connecting to Tally Arbiter server: ${ip}:${port}`, 'info');
-	socket = io.connect('http://' + ip + ':' + port, {reconnect: true});
+	socket = io.connect(`http://${ip}:${port}`, {reconnect: true});
 
 	socket.on('connect', function(){
 		logger('Connected to Tally Arbiter server.', 'info');
@@ -46,9 +49,9 @@ function connectTallyArbiter(ip, port) {
 			TallyPiList.forEach((s) => {
 				logger(`Adding listener client (${s.txt.id}) for Tally Pi server: ${s.host}:${s.port}`, 'info');
 				socket.emit('listenerclient_connect', {
-					'deviceId': "not_assigned_" + s.txt.id,
+					'deviceId': `not_assigned_${s.txt.id}`,
 					'internalId': s.txt.id,
-					'listenerType': 'atemTallyLite_' + s.txt.id,
+					'listenerType': `atemTallyLite_${s.txt.id}`,
 					'canBeReassigned': true,
 					'canBeFlashed': true,
 					'supportsChat': false
@@ -66,7 +69,7 @@ function connectTallyArbiter(ip, port) {
 	});
 
 	socket.on('device_states', function(device_states) {
-		console.log("device_states", device_states);
+		logger(device_states, 'debug');
 		device_states.forEach((d) => {
 			if(d.sources.indexOf("123") > -1) {
 				a.push(d.deviceId);
@@ -79,7 +82,7 @@ function connectTallyArbiter(ip, port) {
 	});
 
 	socket.on('bus_options', function(bus_options) {
-		console.log("bus_options", bus_options);
+		logger(bus_options, 'debug');
 		previewBusId = bus_options.find(x => x.label === "Preview").id;
 		programBusId = bus_options.find(x => x.label === "Program").id;
 	});
@@ -96,7 +99,7 @@ function connectTallyArbiter(ip, port) {
 	});
 
 	socket.on('reassign', function(oldDeviceId, newDeviceId, internalId) {
-		console.log("reassign", oldDeviceId, newDeviceId, internalId);
+		logger(`oldDeviceId: ${oldDeviceId}, newDeviceId: ${newDeviceId}, internalId: ${internalId}`, 'debug');
 		socket.emit('listener_reassign', oldDeviceId, newDeviceId);
 		fakeAtemTallyLiteServer.emit('update_tally', []);
 		fakeAtemTallyLiteServer.emit('set_remote', {
@@ -107,13 +110,13 @@ function connectTallyArbiter(ip, port) {
 }
 
 function connectTallyPi(s) {
-	let client = io.connect('http://' + s.host + ':' + s.port, {reconnect: true});
+	let client = io.connect(`http://${s.host}:${s.port}`, {reconnect: true});
 	client.on('connect', function(){
 		client.emit('pi_host_connect', "http://127.0.0.1:3777");
 	});
 	s["client"] = client;
     TallyPiList.push(s);
-    console.log("Tally Pi List", TallyPiList);
+    console.log("TallyPiList", TallyPiList);
 }
 
 function setupFakeServer() {
