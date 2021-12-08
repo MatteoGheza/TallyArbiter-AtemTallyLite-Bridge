@@ -1,6 +1,8 @@
 const bonjour = require('bonjour')();
 const clc = require('cli-color');
 const io = require("socket.io-client");
+const LocalStorage = require('node-localstorage').LocalStorage;
+const localStorage = new LocalStorage('./tmp');
 
 var ip = "";
 var port = 4455;
@@ -49,7 +51,7 @@ function connectTallyArbiter(ip, port) {
 			TallyPiList.forEach((s) => {
 				logger(`Adding listener client (${s.txt.id}) for Tally Pi server: ${s.host}:${s.port}`, 'info');
 				socket.emit('listenerclient_connect', {
-					'deviceId': `not_assigned_${s.txt.id}`,
+					'deviceId': localStorage.getItem(`${s.txt.id}_devId`) || `not_assigned_${s.txt.id}`,
 					'internalId': s.txt.id,
 					'listenerType': `atemTallyLite_${s.txt.id}`,
 					'canBeReassigned': true,
@@ -100,6 +102,7 @@ function connectTallyArbiter(ip, port) {
 
 	socket.on('reassign', function(oldDeviceId, newDeviceId, internalId) {
 		logger(`oldDeviceId: ${oldDeviceId}, newDeviceId: ${newDeviceId}, internalId: ${internalId}`, 'debug');
+		localStorage.setItem(`${internalId}_devId`, newDeviceId);
 		socket.emit('listener_reassign', oldDeviceId, newDeviceId);
 		fakeAtemTallyLiteServer.emit('update_tally', []);
 		fakeAtemTallyLiteServer.emit('set_remote', {
